@@ -1,0 +1,83 @@
+<div id="settings">
+    <div class="range-block">
+        <div class="range-block-title" data-i18n="temperature">
+            Temperature
+        </div>
+        <div class="range-block-range-and-counter">
+            <div class="range-block-range">
+                <input type="range" id="temp_textgenerationwebui" name="volume" min="0.0" max="2.0" step="0.01" x-setting-id="temp">
+            </div>
+            <div class="range-block-counter">
+                <input type="number" min="0.0" max="2.0" step="0.01" data-for="temp_textgenerationwebui" id="temp_counter_textgenerationwebui">
+    
+            </div>
+        </div>
+    </div>
+    <div class="range-block">
+        <div class="range-block-title">
+            Repetition Penalty
+        </div>
+        <div class="range-block-range-and-counter">
+            <div class="range-block-range">
+                <input type="range" id="rep_pen_textgenerationwebui" name="volume" min="1" max="1.5" step="0.01" x-setting-id="rep_pen">
+            </div>
+            <div class="range-block-counter">
+                <input type="number" min="1" max="1.5" step="0.01" data-for="rep_pen_textgenerationwebui" id="rep_pen_counter_textgenerationwebui">
+    
+            </div>
+        </div>
+    </div>
+    <div class="range-block">
+        <div class="range-block-title">
+            max new tokens
+        </div>
+        <div class="range-block-range-and-counter">
+            <div class="range-block-range">
+                <input type="range" id="max_new_tokens" name="volume" min="50" max="500" step="50">
+            </div>
+            <div class="range-block-counter">
+                <input type="number" min="50" max="500" step="50" id="max_new_tokens">
+            </div>
+        </div>
+    </div>
+    <div class="range-block">
+        <div class="range-block-title">
+            top k
+        </div>
+        <div class="range-block-range-and-counter">
+            <div class="range-block-range">
+                <input type="range" id="top_k" name="volume" min="10" max="100" step="10">
+            </div>
+            <div class="range-block-counter">
+                <input type="number" min="10" max="100" step="10" id="top_k">
+            </div>
+        </div>
+    </div>
+    <div class="range-block">
+        <div class="range-block-title" data-i18n="rep.pen">
+            top p
+        </div>
+        <div class="range-block-range-and-counter">
+            <div class="range-block-range">
+                <input type="range" id="top_p" name="volume" min="0" max="5" step="0.1">
+            </div>
+            <div class="range-block-counter">
+                <input type="number" min="0" max="5" step="0.1" id="top_p">
+            </div>
+        </div>
+    </div>
+    <div class="range-block">
+        <div class="range-block-title" data-i18n="rep.pen">
+            typical p
+        </div>
+        <div class="range-block-range-and-counter">
+            <div class="range-block-range">
+                <input type="range" id="typical_p" name="volume" min="0" max="5" step="0.1">
+            </div>
+            <div class="range-block-counter">
+                <input type="number" min="0" max="5" step="0.1" id="typical_p">
+            </div>
+        </div>
+    </div>
+</div>
+

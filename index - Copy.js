@@ -15,68 +15,49 @@ import {
 } from "../../../../scripts/instruct-mode.js";
 import { getTokenCount, getTokenizerModel, initTokenizers, saveTokenCache } from "../../../../scripts/tokenizers.js";
 import { getCfgPrompt, getGuidanceScale, initCfg } from "../../../../scripts/cfg-scale.js";
-import { getExtensionPrompt,replaceBiasMarkup,getBiasStrings,hideSwipeButtons,baseChatReplace,getRequestHeaders,addOneMessage,deleteLastMessage,deactivateSendButtons,chat,setSendButtonState, eventSource, event_types,saveSettingsDebounced, saveChat,callPopup, name1, name2, this_chid, characters, chat_metadata, getStoppingStrings} from "../../../../script.js";
+import { getExtensionPrompt,replaceBiasMarkup,getBiasStrings,baseChatReplace,getRequestHeaders,addOneMessage,deleteLastMessage,deactivateSendButtons,chat,setSendButtonState, eventSource, event_types,saveSettingsDebounced, saveChat,callPopup, name1, name2, this_chid, characters, chat_metadata} from "../../../../script.js";
 import { PromptManagerModule } from '../../../PromptManager.js'
 import { getWorldInfoPrompt } from "../../../../scripts/world-info.js";
 import { delay , resetScrollHeight } from '../../../utils.js'
 
-const extensionName = "Some-Extension";
+const extensionName = "st-extension-example";
 const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 const extensionSettings = extension_settings[extensionName];
 const defaultSettings = {};
 
+let current_model
+
+const this_max_context = 8000;
 
 let models = [
-  {name: 'MythoMax L2 13B',id: 'mythomax-l2-13b-gptq',description:`A verbose, creative, and uncensored model. Great for fantasy and adventure scenarios.`,context: ''},
-  {name: 'Mythalion 13B GGUF',id: 'mythalion-13b-gguf',description:`This model was created in collaboration with Gryphe, a mixture of Pygmalion-2 13B and Gryphe's Mythomax L2 13B.`,context: ''},
-  {name: 'Nous Hermes Llama2 13b',id: 'nous-hermes-llama2-13b',description:`Smart, capable, and uncensored, this model is best for role-play and coherent conversation.`,context: ''},
-  {name: 'Tiefighter 13b',id: 'llama2-13b-tiefighter',description:`creative, If you let it improvise you get better results than if you drown it in details.`,context: ''},
+  {name: 'MythoMax L2 13B',id: 'thebloke/mythomax-l2-13b-gptq',description:'A verbose, creative, and uncensored model. Great for fantasy and adventure scenarios.',context: ''},
+  {name: 'Mythalion 13B GGUF',id: 'thebloke/mythalion-13b-gguf',description:`This model was created in collaboration with Gryphe, a mixture of Pygmalion-2 13B and Gryphe's Mythomax L2 13B.`,context: ''},
+  {name: 'Nous Hermes Llama2 13b',id: 'nousresearch/nous-hermes-llama2-13b',description:`Smart, capable, and uncensored, this model is best for role-play and coherent conversation.`,context: ''},
+  {name: 'Tiefighter 13b',id: 'koboldai/llama2-13b-tiefighter',description:`creative, If you let it improvise you get better results than if you drown it in details.`,context: ''},
+
 ]
-
-
-// some global variables
-const abortController = new AbortController();
-
 let chat2 = [];
+
 let coreChat = chat.filter(x => !x.is_system);
-
-let current_model = 'mythomax-l2-13b-gptq';
-let this_max_context = 8000;
-
 
 
 for (let i = coreChat.length - 1, j = 0; i >= 0; i--, j++) {
   chat2[i] = formatMessageHistoryItem(coreChat[j], false, false);
 }
 
-const get_settings = () => {
-  return {
-    mas_new_tokens: $('#max_new_tokens').val(),
-    top_k: $('#top_k').val(),
-    top_p: $('#top_p').val(),
-    typical_p: $('#typical_p').val(),
-    max_context: $('#max_context').val(),
-    temperature: $('#temp_textgenerationwebui').val(),
-    rep_penalty: $('#rep_pen_textgenerationwebui').val(),
-  }
-}
 
 const generate = async () => {
   try {
-    awaiting_message()
-    const { headers, body, url, path } = await get_api_request_object();
-
-    const response = await get_response(headers, body, url, path);
-
+    await_message()
+    const response = await get_response();
+  
     handle_response(response);
+
   }catch(err){
     handle_error(err)
   }  
 }
-/**
- * send a placeholder message as the chracter and send it to the frontend chat!
- */
-const awaiting_message = () => {
+const await_message = async () => {
   const message = {
     "extra": {
       display_text: '...'
@@ -95,7 +76,7 @@ const awaiting_message = () => {
  * send a message as the user to the front end
  * @param {string} text 
  */
-const send_as_user = (text) => {
+const send_as_user = async (text) => {
   const message = {
     "extra": {
       display_text: text
@@ -106,26 +87,20 @@ const send_as_user = (text) => {
     "mes": text
   }
   chat.push(message)
-  eventSource.emit(event_types.MESSAGE_SENT, getContext().chat.length - 1);
+  await eventSource.emit(event_types.MESSAGE_SENT, getContext().chat.length - 1);
   addOneMessage(message)
-  eventSource.emit(event_types.USER_MESSAGE_RENDERED, getContext().chat.length - 1);
+  await eventSource.emit(event_types.USER_MESSAGE_RENDERED, getContext().chat.length - 1);
   
 }
-/**
- * This function returns the api request object used for a fetch request!
- * @returns {Promise<object>}
- */
-const get_api_request_object = async () => {
-  const { mas_new_tokens, max_context, rep_penalty, temperature, top_k, top_p, typical_p } = get_settings();
-
-  if (current_model == 'mythomax-l2-13b-gptq' || current_model == 'mythalion-13b-gguf' || current_model == 'nous-hermes-llama2-13b' || current_model == 'llama2-13b-tiefighter'){
+const get_api_request = async () => {
+  if (current_model == 'thebloke/mythomax-l2-13b-gptq' || current_model == 'thebloke/mythalion-13b-gguf' || current_model == 'nousresearch/nous-hermes-llama2-13b' || current_model == 'koboldai/llama2-13b-tiefighter'){
     return {
       path: 'generated_text',
       url: 'https://ai.moemate.io/api/chat',
       headers: {
         'Content-Type': 'application/json',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; rv:109.0) Gecko/20100101 Firefox/119.0',
-        'webahost': current_model == 'mythomax-l2-13b-gptq' ? 'llmmyth.dev.moemate.io' : '' || current_model == 'mythalion-13b-gguf' ? 'mythalion.dev.moemate.io' : '' || current_model == 'nous-hermes-llama2-13b' ? 'llmnh2.dev.moemate.io' : '' || current_model == 'llama2-13b-tiefighter' ? 'llm2.dev.moemate.io' : '',
+        'webahost': current_model == 'thebloke/mythomax-l2-13b-gptq' ? 'llmmyth.dev.moemate.io' : '' || current_model == 'thebloke/mythalion-13b-gguf' ? 'mythalion.dev.moemate.io' : '' || current_model == 'nousresearch/nous-hermes-llama2-13b' ? 'llmnh2.dev.moemate.io' : '' || current_model == 'koboldai/llama2-13b-tiefighter' ? 'llm2.dev.moemate.io' : '',
         'WebaAuth': 'Bearer',
       },
       body: JSON.stringify({
@@ -135,71 +110,48 @@ const get_api_request_object = async () => {
           decoder_input_details: true,
           details: false,
           do_sample: true,
-          max_new_tokens: 500 || mas_new_tokens,
-          repetition_penalty: 1.15 || rep_penalty,
+          max_new_tokens: 500,
+          repetition_penalty: 1.15,
           return_full_text: false,
           seed: null,
           stop: getInstructStoppingSequences(),
           stream: true,
-          temperature: 0.9 || temperature,
-          top_k: 10 || top_k,
-          top_p: 0.6 || top_p,
+          temperature: 0.9,
+          top_k: 10,
+          top_p: 0.6,
           truncate: null,
-          typical_p: 0.99 || typical_p,
+          typical_p: 0.99,
           watermark: false
         }
       }),
     }
   }
 } 
-/**
- * This function handles the current connection status of the extension!
- * @param {boolean} status 
- */
 const handle_status = (status) => {
   if (status === true){
-    $('#send_form').removeClass('no-connection')
+    $('#send_form').removeClass('no_connection')
     $('#ai_settings_drawer').removeClass('no_connection')
     $('#no_connection_icon').hide()
-    $('.online_status4').replaceWith(`            <div class="online_status4">
-    <div class="online_status_indicator4" style="background-color: rgb(26, 255, 0);"></div>
-    <div class="online_status_text4" data-i18n="Not connected...">Connected...</div>
-    </div>`)
-    $('#ai_settings_drawer .drawer-icon').removeClass('no_connection')
   }else {
-    $('#send_form').addClass('no-connection')
+    $('#send_form').addClass('no_connection')
     $('#ai_settings_drawer').addClass('no_connection')
     $('#no_connection_icon').show()
-    $('#ai_settings_drawer .drawer-icon').addClass('no_connection')
-    $('.online_status4').replaceWith(`            <div class="online_status4">
-    <div class="online_status_indicator4" style="background-color: rgb(255, 0, 0);"></div>
-    <div class="online_status_text4" data-i18n="Not connected...">No connection...</div>
-</div>`)
   }
 }
-const display_settings = () => {
-  try {
-    $.get(`${extensionFolderPath}/html/settings/${current_model}.html`, function (data) {
-      $("#api_settings_menu > #settings").replaceWith(data);
-    })
-  }catch(err){
-    toastr.error('No Settings Found!')
-  }
-}
-/**
- * This function creates the api settings drawer in the top-bar!
- */
+
 const api_settings_drawer = async () => {
 
   $('#top-settings-holder').prepend(
     `<div id="ai_settings_drawer" class="drawer no_connection">
       <div id='api-settings-toggle' class="drawer-toggle">
-        <i id='no_connection_icon' style="position: absolute; padding-top: 15px; padding-left: 18px" class="fa-solid fa-circle-exclamation"></i>
         <div class="drawer-icon fa-solid fa-server closedIcon" title="API Settings" data-i18n="[title]API Settings"></div>
+        <i id='no_connection_icon' class="fa-solid fa-circle-exclamation"></i>
       </div>
      </div`)
 
-  const data = await $.ajax(`${extensionFolderPath}/html/api_drawer.html`);
+
+
+  const data = await $.get(`${extensionFolderPath}/html/api_drawer.html`);
   $("#ai_settings_drawer").append(data);
 
   $('#api-settings-toggle').on('click', function () {
@@ -262,7 +214,6 @@ const api_settings_drawer = async () => {
         drawer.toggleClass('closedDrawer openDrawer');
     }
   });
-
   $('#api_button_connect').on('click' , function(){
     handle_status(true)
   })
@@ -273,65 +224,50 @@ const api_settings_drawer = async () => {
   const deviceInfo = getDeviceInfo();
   if (deviceInfo && deviceInfo.device.type === 'desktop') {
     // @ts-ignore
-    $('#model').select2({
+      $('#model').select2({
           placeholder: 'Select a model',
           searchInputPlaceholder: 'Search models...',
           searchInputCssClass: 'text_pole',
           width: '100%',
           templateResult: getModelTemplate,
-    });
+      });
   }
   jQuery(async () => {
-    $('#api_settings_menu').append('<div id="settings"></div>')
-
     $("#model").on('change' , function(){
-      let model = String($(this).val()); 
+      let model = String($(this).val());
   
       current_model = model
-
-      display_settings()
     })
-
   })
-  display_settings()
 }
-/**
- * 
- * @param {object} headers - being the headers used for the fetch request! 
- * @param {object} body - being the body used for the fetch request!
- * @param {string} url - being the url fetched from!
- * @param {string} path - being the path to the response message object(string)
- */
-const get_response = async (headers,body,url,path) => {
+
+
+const get_response = async () => {
+  const abortController = new AbortController();
+
+  const { headers,body,url,path } = await get_api_request()
 
   const args = {
     headers: headers,
     body: body,
   }
 
-  return await fetch(url, { signal: abortController.signal, method: 'POST',...args }).then(async response => {
-    const data = await response.json()
+  const response = await fetch(url, { signal: abortController.signal, method: 'POST',...args });  
+  const data = await response.json()
 
-    if (response.ok) {
-      return data[path]
-    }else{
-      handle_error(response)
-    }
-  })
+  if (response.ok) {
+    return data[path]
+  }else{
+    handle_error(response)
+  }
 }
-/**
- * This function takes in an parameter of input that it displays in the frontend chat
- * @param {string} input - being the message to display
- */
-const handle_response = (input) => {
+const handle_response = async (input) => {
   if (chat[chat.length-1].mes == '...' && chat[chat.length-1].is_user == false){
     deleteLastMessage()
   }
-  Array.from(getStoppingStrings().keys()).some(key => input.replaceAll(String(key),''))
-
   const message = {
     "extra": {
-      display_text: String(input),
+      display_text: await input
     },
     "name": name2,
     "is_user": false,
@@ -348,13 +284,12 @@ const handle_response = (input) => {
         }
       }
     ],
-    "mes": String(input),
+    "mes": await input,
   }
-
   chat.push(message)
-  eventSource.emit(event_types.MESSAGE_RECEIVED, getContext().chat.length - 1);
+  await eventSource.emit(event_types.MESSAGE_RECEIVED, getContext().chat.length - 1);
   addOneMessage(message)
-  eventSource.emit(event_types.CHARACTER_MESSAGE_RENDERED, getContext().chat.length - 1);
+  await eventSource.emit(event_types.CHARACTER_MESSAGE_RENDERED, getContext().chat.length - 1);
 }
 const handle_error = (err) => {
   if (chat[chat.length-1].mes == '...' && chat[chat.length-1].is_user == false){
@@ -368,13 +303,7 @@ const handle_abort = () => {
     deleteLastMessage()
   }
 }
-/**
- * 
- * @param {object} chat_metadata 
- * @param {object} characters 
- * @param {number} this_chid 
- * @returns - the prompt for the api request 
- */
+
 const get_prompt = async (chat_metadata, characters, this_chid) => {
   const isInstruct = power_user.instruct.enabled
   let current_chat = ''
@@ -406,7 +335,7 @@ const get_prompt = async (chat_metadata, characters, this_chid) => {
   console.log(storyString)
   return `${storyString}\n${mesExamples}\n${current_chat}\n${formatInstructModePrompt(name2,false,promptBias,name1,name2)}`
 }
-const onSend = () => {
+const onSend = async () => {
   if (getContext().characterId == null){
     toastr.warning('dumbass select a character!')
 
@@ -415,7 +344,7 @@ const onSend = () => {
   }else{
     const textarea = $("#send_text");
     const text = textarea.val();
-    send_as_user(String(text));
+    await send_as_user(String(text));
     textarea.val("");
     generate();
   }
@@ -439,12 +368,12 @@ const hjack_send = () => {
   })
 }
  
-jQuery(() => {
+jQuery(async () => {
   $("#send_textarea").replaceWith(`<textarea id="send_text" placeholder="Type a message, Enter + Shift for new line" name="text" style="height: 35px;"></textarea>`)
   hjack_send()
   api_settings_drawer()
 
-  $('#option_regenerate').on('click', () => {
+  $('.option_regenerate').on('click', () => {
     if (chat[chat.length-1].is_user == false){
       deleteLastMessage()
     }    
@@ -452,7 +381,6 @@ jQuery(() => {
   })
 
   $(".option_regenerate").replaceWith(`<a class="option_regenerate"><i class="fa-lg fa-solid fa-repeat"></i><span data-i18n="Regenerate">Regenerate</span></a>`)
-
 
   $("#option_convert_to_group").hide();
   $("#rm_button_group_chats").hide();
@@ -569,10 +497,7 @@ jQuery(() => {
 //   return combinedPrompt;
 // }
 
-
-
-// 
-const getdate = () => {
+function getdate() {
   const currentDateTime = new Date();
 
   return currentDateTime.toLocaleString('en-US', {
@@ -600,7 +525,7 @@ function formatMessageHistoryItem(chatItem, isInstruct, forceOutputSequence) {
 
   return textResult;
 }
-const getModelTemplate = (option) => {
+function getModelTemplate(option) {
   const model = models.find(x => x.id === option?.element?.value);
 
   if (!option.id || !model) {

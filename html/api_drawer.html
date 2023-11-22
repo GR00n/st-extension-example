@@ -1,0 +1,33 @@
+
+<div id="rm_api_block" class="drawer-content closedDrawer">
+    <h3 class="margin0" id="title_api">API Settings</h3>
+    <div class="flex-container flexFlowColumn">
+        <div id="textgenerationwebui_api" style="display: block; position: relative;">
+            <form action="javascript:void(null);" method="post" enctype="multipart/form-data">
+                <div data-tg-type="mancer" class="flex-container flexFlowColumn">
+                    <div class="flex1">
+                        <h4>Model</h4>
+                        <select id="model" data-select2-id="select2-data-model" tabindex="-1" class="select2-hidden-accessible" aria-hidden="true"></select>
+                        <h4 data-i18n="model_settings">Settings</h4>
+                        <hr>
+                        <div id='api_settings_menu' style="padding-right: 80px;" class="flex-container flexFlowColumn">
+                        </div>
+                    </div>
+                </div>
+            </form>
+            <hr>
+            <div id="api_button_connect" class="menu_button" type="submit" data-i18n="Connect">Connect</div>
+            <div class="online_status4">
+                <div class="online_status_indicator4" style="background-color: rgb(255, 0, 0);"></div>
+                <div class="online_status_text4" data-i18n="Not connected...">No connection...</div>
+            </div>
+        </div>
+    </div>
+    <div class="flex-container alignitemscenter spaceBetween wide100p">
+        <label for="auto-connect-checkbox" class="checkbox_label"><input id="auto-connect-checkbox" type="checkbox">
+            <span data-i18n="Auto-connect to Last Server">Auto-connect to Last Server</span>
+        </label>
+        <a id="viewSecrets" href="javascript:void(0);"><span data-i18n="View hidden API keys">View hidden API keys</span></a>
+    </div>
+</div>
+
